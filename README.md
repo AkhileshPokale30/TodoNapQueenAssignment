@@ -25,7 +25,7 @@
 
 # Screenshot
 
-
+[![logo.jpg](https://i.postimg.cc/RhY9Fh9S/logo.jpg)](https://postimg.cc/RJw2pMNy)
 
 ## 💻 Tech Stack
 
