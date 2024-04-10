@@ -1,0 +1,424 @@
+import React, { useContext, useEffect, useState } from "react";
+import {
+  Avatar,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  IconButton,
+  MenuItem,
+  SwipeableDrawer,
+  Tooltip,
+} from "@mui/material";
+import styled from "@emotion/styled";
+import {
+  AddRounded,
+  AdjustRounded,
+  BugReportRounded,
+  CategoryRounded,
+  Favorite,
+  FiberManualRecord,
+  GetAppRounded,
+  GitHub,
+  InstallDesktopRounded,
+  InstallMobileRounded,
+  Logout,
+  SettingsRounded,
+  StarRounded,
+  TaskAltRounded,
+} from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
+import { defaultUser } from "../constants/defaultUser";
+import { SettingsDialog } from ".";
+import logo from "../assets/logo256.png";
+import { ColorPalette, pulseAnimation, ring } from "../styles";
+import { UserContext } from "../contexts/UserContext";
+import { iOS } from "../utils/iOS";
+import { fetchGitHubInfo } from "../services/githubApi";
+import { showToast, timeAgo } from "../utils";
+import bmcLogo from "../assets/bmc-logo.svg";
+
+export const ProfileSidebar = () => {
+  const { user, setUser } = useContext(UserContext);
+  const n = useNavigate();
+
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
+  const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState<boolean>(false);
+  const [openSettings, setOpenSettings] = useState<boolean>(false);
+
+  const [stars, setStars] = useState<number | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<string | null>(null);
+  const [issuesCount, setIssuesCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchRepoInfo = async () => {
+      try {
+        const { repoData, branchData } = await fetchGitHubInfo();
+        setStars(repoData.stargazers_count);
+        setLastUpdate(branchData.commit.commit.committer.date);
+        setIssuesCount(repoData.open_issues_count);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    fetchRepoInfo();
+  }, []);
+
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+    document.getElementById("root")?.setAttribute("aria-sidebar", "true");
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+    document.getElementById("root")?.removeAttribute("aria-sidebar");
+  };
+
+  const handleLogoutConfirmationOpen = () => {
+    setLogoutConfirmationOpen(true);
+    setAnchorEl(null);
+  };
+
+  const handleLogoutConfirmationClose = () => {
+    setLogoutConfirmationOpen(false);
+  };
+
+  const handleLogout = () => {
+    setUser(defaultUser);
+    handleLogoutConfirmationClose();
+    showToast("You have been successfully logged out");
+  };
+
+  interface BeforeInstallPromptEvent extends Event {
+    readonly platforms: ReadonlyArray<string>;
+    readonly userChoice: Promise<{
+      outcome: "accepted" | "dismissed";
+      platform: string;
+    }>;
+    prompt(): Promise<void>;
+  }
+
+  const [supportsPWA, setSupportsPWA] = useState<boolean>(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isAppInstalled, setIsAppInstalled] = useState<boolean>(false);
+
+  useEffect(() => {
+    const beforeInstallPromptHandler = (e: Event) => {
+      e.preventDefault();
+      setSupportsPWA(true);
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+
+    const detectAppInstallation = () => {
+      window.matchMedia("(display-mode: standalone)").addEventListener("change", (e) => {
+        setIsAppInstalled(e.matches);
+      });
+    };
+
+    window.addEventListener("beforeinstallprompt", beforeInstallPromptHandler);
+    detectAppInstallation();
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", beforeInstallPromptHandler);
+    };
+  }, []);
+
+  const installPWA = () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === "accepted") {
+          showToast("App installed successfully!");
+        }
+      });
+    }
+  };
+
+  return (
+    <Container>
+      <Tooltip title={<div translate="no">{user.name || "User"}</div>}>
+        <IconButton
+          id="basic-button"
+          aria-controls={open ? "basic-menu" : undefined}
+          aria-haspopup="true"
+          aria-expanded={open ? "true" : undefined}
+          onClick={handleClick}
+          sx={{ zIndex: 1 }}
+        >
+          <Avatar
+            src={(user.profilePicture as string) || undefined}
+            alt={user.name || "User"}
+            onError={() => {
+              setUser((prevUser) => ({
+                ...prevUser,
+                profilePicture: null,
+              }));
+
+              showToast("Error in profile picture URL", { type: "error" });
+              throw new Error("Error in profile picture URL");
+            }}
+            sx={{
+              width: "52px",
+              height: "52px",
+              background: user.profilePicture ? "#ffffff1c" : "#747474",
+              transition: ".2s all",
+              fontSize: "26px",
+            }}
+          >
+            {user.name ? user.name[0].toUpperCase() : undefined}
+          </Avatar>
+        </IconButton>
+      </Tooltip>
+      <StyledSwipeableDrawer
+        disableBackdropTransition={!iOS}
+        disableDiscovery={iOS}
+        id="basic-menu"
+        anchor="right"
+        open={open}
+        onOpen={() => console.log("")}
+        onClose={handleClose}
+      >
+        <LogoContainer
+          translate="no"
+          onClick={() => {
+            n("/");
+            handleClose();
+          }}
+        >
+          <Logo src={logo} alt="logo" />
+          <h2>
+            <span style={{ color: "#C70039" }}>NAP</span> QUEEN
+            <span style={{ color: "#C70039" }}>.</span>
+          </h2>
+        </LogoContainer>
+
+        
+
+        <StyledMenuItem
+          onClick={() => {
+            n("/add");
+            handleClose();
+          }}
+        >
+          <AddRounded /> &nbsp; Add Task
+        </StyledMenuItem>
+
+        {user.settings[0].enableCategories !== undefined && user.settings[0].enableCategories && (
+          <StyledMenuItem
+            onClick={() => {
+              n("/");
+              handleClose();
+            }}
+          >
+            <CategoryRounded /> &nbsp; Categories
+          </StyledMenuItem>
+        )}
+
+        
+
+        
+
+
+          
+
+
+
+
+        
+        <div
+          style={{
+            marginTop: "auto",
+            marginBottom:
+              window.matchMedia("(display-mode: standalone)").matches &&
+              /Mobi/.test(navigator.userAgent)
+                ? "38px"
+                : "16px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+          }}
+        >
+          
+          
+          <StyledDivider />
+          <CreditsContainer translate="no">
+            <span style={{ display: "flex", alignItems: "center" }}>
+              Made with &nbsp;
+              <Favorite sx={{ fontSize: "14px" }} />
+            </span>
+            <span style={{ marginLeft: "6px", marginRight: "4px" }}>by</span>
+            <a
+              style={{ textDecoration: "none", color: "inherit" }}
+              href="https://github.com/AkhileshPokale30"
+            >
+              AkhileshPokale30
+            </a>
+          </CreditsContainer>
+          <CreditsContainer>
+            {lastUpdate && (
+              <Tooltip title={timeAgo(new Date(lastUpdate))}>
+                <span>
+                  Last update:{" "}
+                  {new Intl.DateTimeFormat(navigator.language, {
+                    dateStyle: "long",
+                    timeStyle: "medium",
+                  }).format(new Date(lastUpdate))}
+                </span>
+              </Tooltip>
+            )}
+          </CreditsContainer>
+        </div>
+      </StyledSwipeableDrawer>
+
+      <Dialog open={logoutConfirmationOpen} onClose={handleLogoutConfirmationClose}>
+        <DialogTitle>Logout Confirmation</DialogTitle>
+        <DialogContent>
+          Are you sure you want to logout? <b>Your tasks will not be saved.</b>
+        </DialogContent>
+        <DialogActions>
+          <DialogBtn onClick={handleLogoutConfirmationClose}>Cancel</DialogBtn>
+          <DialogBtn onClick={handleLogout} color="error">
+            Logout
+          </DialogBtn>
+        </DialogActions>
+      </Dialog>
+      <SettingsDialog open={openSettings} onClose={() => setOpenSettings(!openSettings)} />
+    </Container>
+  );
+};
+
+const Container = styled.div`
+  position: absolute;
+  right: 16vw;
+  top: 14px;
+  z-index: 900;
+  @media (max-width: 1024px) {
+    right: 16px;
+  }
+`;
+
+const StyledSwipeableDrawer = styled(SwipeableDrawer)`
+  & .MuiPaper-root {
+    border-radius: 24px 0 0 0;
+    min-width: 300px;
+    box-shadow: none;
+    padding: 4px;
+    background: #f9fafc;
+    z-index: 999;
+
+    @media (min-width: 1920px) {
+      min-width: 320px;
+    }
+
+    @media (max-width: 1024px) {
+      min-width: 280px;
+    }
+
+    @media (max-width: 600px) {
+      min-width: 56vw;
+    }
+  }
+`;
+
+const StyledMenuItem = styled(MenuItem)`
+  margin: 0px 8px;
+  padding: 16px 12px;
+  border-radius: 14px;
+  box-shadow: none;
+  display: flex;
+  font-weight: 500;
+  color: #101727;
+  align-items: center;
+  gap: 6px;
+
+  & svg,
+  .bmc-icon {
+    transition: 0.4s transform;
+  }
+
+  &:hover {
+    background-color: #f0f0f0;
+    & svg[data-testid="GitHubIcon"] {
+      transform: rotateY(${2 * Math.PI}rad);
+    }
+    & svg[data-testid="SettingsRoundedIcon"] {
+      transform: rotate(180deg);
+    }
+    & svg[data-testid="BugReportRoundedIcon"] {
+      transform: rotate(45deg) scale(0.9) translateY(-20%);
+    }
+    & .bmc-icon {
+      animation: ${ring} 2.5s ease-in alternate;
+    }
+  }
+`;
+
+const DialogBtn = styled(Button)`
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 16px;
+  margin: 8px;
+`;
+
+const MenuLabel = styled.span<{ clr?: string }>`
+  margin-left: auto;
+  font-weight: 600;
+  background: ${({ clr, theme }) => (clr || theme.primary) + "35"};
+  color: ${({ clr, theme }) => clr || theme.primary};
+  padding: 2px 12px;
+  border-radius: 32px;
+  font-size: 14px;
+`;
+
+const StyledDivider = styled(Divider)`
+  margin: 0 8px;
+`;
+
+const PulseMenuLabel = styled(MenuLabel)`
+  animation: ${({ theme }) => pulseAnimation(theme.primary, 6)} 1.2s infinite;
+  padding: 6px;
+  margin-right: 4px;
+`;
+
+PulseMenuLabel.defaultProps = {
+  children: (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <FiberManualRecord style={{ fontSize: "16px" }} />
+    </div>
+  ),
+};
+
+const LogoContainer = styled.div`
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  margin-top: 8px;
+  gap: 16px;
+  cursor: pointer;
+`;
+
+
+
+const Logo = styled.img`
+  width: 52px;
+  margin-left: 18px;
+`;
+
+const CreditsContainer = styled.div`
+  font-size: 12px;
+  margin: 0;
+  color: #101727c0;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
