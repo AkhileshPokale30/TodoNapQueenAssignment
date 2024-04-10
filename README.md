@@ -25,7 +25,9 @@
 
 # Screenshot
 
-[![logo.jpg](https://i.postimg.cc/RhY9Fh9S/logo.jpg)](https://postimg.cc/RJw2pMNy)
+
+https://github.com/AkhileshPokale30/TodoNapQueenAssignment/assets/81848820/19d9ca56-2797-4257-bf04-a84baa2dc526
+
 
 ## 💻 Tech Stack
 
